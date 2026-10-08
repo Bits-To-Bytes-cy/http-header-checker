@@ -6,6 +6,8 @@
 
 A command-line tool that fetches a URL's HTTP response headers, scores them against 8 modern security best practices (0–100 points), and produces a colour-coded **Pass / Warning / Fail** report with one-line fixes for every finding.
 
+![http-header-checker terminal screenshot](docs/screenshot.png)
+
 > **Ethical use**: Scanning HTTP headers is a normal read-only request, but please only scan sites you own or have explicit permission to test.
 
 ---
@@ -17,7 +19,7 @@ A command-line tool that fetches a URL's HTTP response headers, scores them agai
 | **8 security headers checked** | HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, Cache-Control |
 | **Value-quality scoring** | Partial credit for weak-but-present headers (short HSTS max-age, `unsafe-inline` CSP, etc.) |
 | **Pass / Warning / Fail** | Each finding is labelled with severity and a one-line fix |
-| **Information-leak detection** | Warns if `Server` or `X-Powered-By` reveals a software version |
+| **Information-leak detection** | Warns if `Server` or `X-Powered-By` reveals server technology |
 | **Cookie-flag analysis** | Checks `Set-Cookie` for `Secure`, `HttpOnly`, `SameSite` |
 | **HTTP vs HTTPS detection** | Notes if HSTS cannot apply and whether the site redirects to HTTPS |
 | **JSON output** | `--json` or `--output report.json` for pipeline integration |
@@ -69,7 +71,7 @@ options:
 python header_checker.py https://example.com
 
 # Scan two URLs at once
-python header_checker.py https://example.com https://another.com
+python header_checker.py https://example.com https://github.com
 
 # Save a JSON report
 python header_checker.py https://example.com --output report.json
@@ -79,43 +81,40 @@ python header_checker.py https://example.com --fail-under 80
 
 # Plain-text output (no colour) for log files
 python header_checker.py https://example.com --no-colour
-
-# Custom timeout for slow sites
-python header_checker.py https://example.com --timeout 20
 ```
 
 ---
 
-## Sample Output
+## Real Sample Output (`https://example.com`)
 
 ```
-──────────────────── HTTP Security Header Report ────────────────────
+───────────────────────────── HTTP Security Header Report ─────────────────────────────
   URL:       https://example.com
+  Final URL: https://example.com/
   Status:    HTTP 200
-  Scanned:   2026-10-08T09:15:42+00:00
-  Elapsed:   134 ms
+  Scanned:   2026-10-08T11:34:20+00:00
+  Elapsed:   1166 ms
 
-  Score: 35/100   Grade: F   ██████░░░░░░░░░░░░░░░░░░░░░░
+  Score: 0/100   Grade: F   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-╭──────────────────────── Security Header Assessment ────────────────────────╮
-│   Header                        Score   Severity   Finding         Fix     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ ✔  Strict-Transport-Security    20/20   PASS       max-age=...            │
-│ ✖  Content-Security-Policy       0/25   FAIL       Header is absent  ...  │
-│ ✔  X-Frame-Options              10/10   PASS       DENY ✓                 │
-│ ✔  X-Content-Type-Options       10/10   PASS       nosniff ✓              │
-│ ✖  Referrer-Policy               0/10   FAIL       Header is absent  ...  │
-│ ✖  Permissions-Policy            0/10   FAIL       Header is absent  ...  │
-│ ✖  Cross-Origin-Opener-Policy    0/5    FAIL       Header is absent  ...  │
-│ ✖  Cache-Control                 0/10   FAIL       Header is absent  ...  │
-╰─────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────── Security Header Assessment ────────────────────────────────────────╮
+│    Header                      Score   Severity   Finding            Fix                                    │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ ✖  Strict-Transport-Security    0/20   FAIL       Header is absent   max-age=31536000; includeSubDomains   │
+│ ✖  Content-Security-Policy      0/25   FAIL       Header is absent   default-src 'self';                    │
+│ ✖  X-Frame-Options              0/10   FAIL       Header is absent   X-Frame-Options: DENY                  │
+│ ✖  X-Content-Type-Options       0/10   FAIL       Header is absent   X-Content-Type-Options: nosniff        │
+│ ✖  Referrer-Policy              0/10   FAIL       Header is absent   Referrer-Policy: strict-origin...      │
+│ ✖  Permissions-Policy           0/10   FAIL       Header is absent   Permissions-Policy: geolocation=()     │
+│ ✖  Cross-Origin-Opener-Policy   0/5    FAIL       Header is absent   Cross-Origin-Opener-Policy: same-origin│
+│ ✖  Cache-Control                0/10   FAIL       Header is absent   Cache-Control: no-store, no-cache...   │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ⚠  Information Disclosure (not included in score)
-      •  Server: 'ECS (nyb/1D2E)' — discloses server technology (consider removing)
+      •  Server: 'cloudflare' — discloses server technology (consider removing)
 
-────────────────────────────────────────────────────────────────────
-Disclaimer: For authorised testing only. Use only on sites you own or
-have explicit permission to test.
+────────────────────────────────────────────────────────────────────────────────────────
+Disclaimer: For authorised testing only. Use only on sites you own or have explicit permission to test.
 ```
 
 ---
@@ -133,7 +132,7 @@ have explicit permission to test.
 | `Cross-Origin-Opener-Policy` | 5 | `same-origin` |
 | `Cache-Control` | 10 | Any non-empty value |
 
-### Grade scale
+### Grade Scale
 
 | Score | Grade |
 |---|---|
@@ -153,7 +152,7 @@ Missing headers earn 0 pts (Fail).
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+python -m pytest tests/ -v
 ```
 
 The test suite makes **no real network requests** — all HTTP calls are mocked via `unittest.mock`.
@@ -169,6 +168,8 @@ http-header-checker/
 │   ├── headers.py           # Header definitions, weights, value validators
 │   ├── scanner.py           # HTTP fetch + analysis logic
 │   └── reporter.py          # Rich console + JSON output
+├── docs/
+│   └── screenshot.png       # CLI output screenshot
 ├── tests/
 │   ├── test_headers.py      # Validator unit tests
 │   ├── test_scanner.py      # Scan logic (mocked HTTP)
