@@ -6,7 +6,7 @@
 
 A command-line tool that fetches a URL's HTTP response headers, scores them against 8 modern security best practices (0–100 points), and produces a colour-coded **Pass / Warning / Fail** report with one-line fixes for every finding.
 
-![http-header-checker terminal screenshot](docs/screenshot.png)
+![http-header-checker github.com scan screenshot](docs/screenshot_github.png)
 
 > **Ethical use**: Scanning HTTP headers is a normal read-only request, but please only scan sites you own or have explicit permission to test.
 
@@ -85,37 +85,17 @@ python header_checker.py https://example.com --no-colour
 
 ---
 
-## Real Sample Output (`https://example.com`)
+## Screenshots & Reports
 
-```
-───────────────────────────── HTTP Security Header Report ─────────────────────────────
-  URL:       https://example.com
-  Final URL: https://example.com/
-  Status:    HTTP 200
-  Scanned:   2026-10-08T11:34:20+00:00
-  Elapsed:   1166 ms
+### 1. Detailed Header Scan (`https://github.com` — Grade C: 68/100)
+Shows a mix of **Pass** (HSTS, XFO, XCTO, Cache-Control), **Warning** (CSP inline directives, Referrer policy), and **Fail** items alongside Cookie and Server disclosure findings:
 
-  Score: 0/100   Grade: F   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+![GitHub scan output](docs/screenshot_github.png)
 
-╭──────────────────────────────────────── Security Header Assessment ────────────────────────────────────────╮
-│    Header                      Score   Severity   Finding            Fix                                    │
-├─────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ ✖  Strict-Transport-Security    0/20   FAIL       Header is absent   max-age=31536000; includeSubDomains   │
-│ ✖  Content-Security-Policy      0/25   FAIL       Header is absent   default-src 'self';                    │
-│ ✖  X-Frame-Options              0/10   FAIL       Header is absent   X-Frame-Options: DENY                  │
-│ ✖  X-Content-Type-Options       0/10   FAIL       Header is absent   X-Content-Type-Options: nosniff        │
-│ ✖  Referrer-Policy              0/10   FAIL       Header is absent   Referrer-Policy: strict-origin...      │
-│ ✖  Permissions-Policy           0/10   FAIL       Header is absent   Permissions-Policy: geolocation=()     │
-│ ✖  Cross-Origin-Opener-Policy   0/5    FAIL       Header is absent   Cross-Origin-Opener-Policy: same-origin│
-│ ✖  Cache-Control                0/10   FAIL       Header is absent   Cache-Control: no-store, no-cache...   │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+### 2. Failing Site Scan (`https://example.com` — Grade F: 0/100)
+Shows complete breakdown when all security headers are missing:
 
-⚠  Information Disclosure (not included in score)
-      •  Server: 'cloudflare' — discloses server technology (consider removing)
-
-────────────────────────────────────────────────────────────────────────────────────────
-Disclaimer: For authorised testing only. Use only on sites you own or have explicit permission to test.
-```
+![Example.com scan output](docs/screenshot_example.png)
 
 ---
 
@@ -169,7 +149,10 @@ http-header-checker/
 │   ├── scanner.py           # HTTP fetch + analysis logic
 │   └── reporter.py          # Rich console + JSON output
 ├── docs/
-│   └── screenshot.png       # CLI output screenshot
+│   ├── screenshot_github.png  # Terminal screenshot (github.com scan)
+│   └── screenshot_example.png # Terminal screenshot (example.com scan)
+├── tools/
+│   └── create_screenshot.py   # Screenshot generator utility
 ├── tests/
 │   ├── test_headers.py      # Validator unit tests
 │   ├── test_scanner.py      # Scan logic (mocked HTTP)
